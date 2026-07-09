@@ -1,7 +1,7 @@
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 
 export function createDb(path = 'velos.db') {
-  const db = new DatabaseSync(path);
+  const db = new Database(path);
   db.exec(`
     CREATE TABLE IF NOT EXISTS decisions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

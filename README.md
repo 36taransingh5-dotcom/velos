@@ -59,3 +59,17 @@ Current policy plus live `month_to_date_spend` and `remaining_budget`.
 ```bash
 npm test
 ```
+
+## Deploying
+
+The app is split so it runs the same way locally and on Vercel:
+
+- [src/app.js](src/app.js) — the Express app (routes, no `listen()`).
+- [src/server.js](src/server.js) — local dev entry, calls `app.listen()`. Used by `npm start`.
+- [api/index.js](api/index.js) — Vercel serverless entry, wraps the same app as a function handler.
+- [public/](public) — the landing page. Vercel serves this directory as static/CDN content automatically; Express serves it the same way locally.
+- [vercel.json](vercel.json) — rewrites `/evaluate`, `/decisions`, `/policy` to the serverless function (everything else falls through to `public/`).
+
+Push to a branch connected to a Vercel project and it deploys with no other config.
+
+**Audit log persistence on Vercel:** serverless functions have a read-only filesystem outside `/tmp`, and `/tmp` is wiped between cold starts and not shared across concurrent instances. The SQLite audit log still works — reads and writes succeed — but on Vercel it's only reliable *within a single warm invocation*, not as a durable log across requests. Locally (`npm start`), the same file (`velos.db`) persists normally on disk. For a production audit log that needs to survive across serverless instances, swap `src/db.js` for a hosted database (Vercel Postgres, Turso, Neon, etc.) — the `createDb`/`insertDecision`/`monthToDateSpend`/`listDecisions` functions are the only place that would need to change.
