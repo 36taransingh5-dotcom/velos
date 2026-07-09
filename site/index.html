@@ -275,11 +275,60 @@
     .nav { margin-bottom: 44px; }
     .intro { margin-left: 16px; margin-right: 16px; }
   }
+
+  /* ---------- LIQUID CURSOR ---------- */
+  :root {
+    --cursor-glow: rgba(140,190,230,.55);
+    --cursor-ring: rgba(255,255,255,.8);
+  }
+  html[data-cursor-theme="light"] {
+    --cursor-glow: rgba(232,65,44,.35);
+    --cursor-ring: rgba(16,20,24,.55);
+  }
+  @media (pointer: fine) {
+    body.liquid-on, body.liquid-on a, body.liquid-on button { cursor: none; }
+  }
+  /* mix-blend-mode: difference inverts whatever is underneath, so the
+     blob reads clearly whether it's over the dark sky or the cream
+     sections — no per-theme color swap needed for the core itself. */
+  .liquid-cursor {
+    position: fixed; top: 0; left: 0; width: 46px; height: 46px;
+    margin: -23px 0 0 -23px;
+    border-radius: 50%; pointer-events: none; z-index: 9999;
+    background: radial-gradient(circle at 32% 28%,
+      #ffffff 0%, #ffffff 30%, rgba(255,255,255,.92) 48%,
+      rgba(255,255,255,.55) 68%, rgba(255,255,255,0) 82%);
+    box-shadow: 0 0 30px 6px var(--cursor-glow), inset 0 0 10px rgba(255,255,255,.4);
+    mix-blend-mode: difference;
+    will-change: transform, width, height;
+    opacity: 0;
+    transition: opacity .25s ease, width .32s cubic-bezier(.2,.9,.3,1.3), height .32s cubic-bezier(.2,.9,.3,1.3), box-shadow .3s ease;
+  }
+  .liquid-cursor.visible { opacity: 1; }
+  .liquid-cursor.hover { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+  .liquid-cursor.press { width: 32px; height: 32px; margin: -16px 0 0 -16px; }
+
+  .ripple {
+    position: fixed; top: 0; left: 0; width: 12px; height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%; pointer-events: none; z-index: 9998;
+    border: 1.5px solid var(--cursor-ring);
+    box-shadow: 0 0 12px 1px var(--cursor-glow);
+    opacity: .8; transform: scale(1);
+    transition: transform 1.1s cubic-bezier(.15,.6,.25,1), opacity 1.1s ease;
+  }
+  .ripple.grow { transform: scale(7); opacity: 0; }
+
+  @media (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .liquid-cursor, .ripple { display: none; }
+  }
 </style>
 </head>
 <body>
 
-<section class="hero">
+<div class="liquid-cursor" id="liquidCursor"></div>
+
+<section class="hero" data-cursor="dark">
   <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div><div class="cloud c4"></div>
 
   <nav class="nav">
@@ -305,12 +354,12 @@
   </div>
 </section>
 
-<div class="intro">
+<div class="intro" data-cursor="light">
   we're velos — a policy engine for agent spending.<br>
   built for <span class="hl">trust &amp; accountability</span>
 </div>
 
-<section class="features">
+<section class="features" data-cursor="light">
   <div class="features-label">what velos does</div>
   <h2>every dollar an agent spends,<br><em>decided, explained, recorded</em></h2>
   <div class="grid">
@@ -332,7 +381,7 @@
   </div>
 </section>
 
-<section class="code-section">
+<section class="code-section" data-cursor="light">
   <div class="code-copy">
     <h2>one endpoint.<br><em>before</em> the money moves.</h2>
     <p>Your agent calls <span class="mono-note">POST /evaluate</span> before any purchase. Velos checks the policy and returns a decision your payment system can act on.</p>
@@ -355,13 +404,13 @@ curl -X POST velos.dev/evaluate \
 }</div>
 </section>
 
-<section class="footer-cta" id="access">
+<section class="footer-cta" id="access" data-cursor="dark">
   <h2>give your agents<br>an allowance</h2>
   <p>We're onboarding design partners now. AI startups go first.</p>
   <a class="cta" href="mailto:36taransingh5@gmail.com?subject=Velos%20early%20access">Get Early Access <span class="arrow">→</span></a>
 </section>
 
-<footer><b>+velos</b> · the financial control layer for AI agents · © 2026</footer>
+<footer data-cursor="dark"><b>+velos</b> · the financial control layer for AI agents · © 2026</footer>
 
 <script>
 // CRT terminal: types out /evaluate calls and cycles through the three decisions
@@ -405,6 +454,95 @@ async function run(){
   }
 }
 run();
+
+// Liquid mercury cursor: a chrome blob that lags the pointer with spring
+// easing, squishes along its direction of travel, and drops expanding
+// ripple rings as it moves — same idea as the reference site's fluid
+// cursor, recolored to this site's chrome/sky palette per section.
+(function () {
+  if (!window.matchMedia('(pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  document.body.classList.add('liquid-on');
+  const blob = document.getElementById('liquidCursor');
+
+  let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+  let bx = mx, by = my;
+  let lastRippleX = mx, lastRippleY = my;
+  let lastMoveT = performance.now();
+  let started = false;
+
+  window.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    lastMoveT = performance.now();
+    if (!started) { bx = mx; by = my; started = true; blob.classList.add('visible'); }
+
+    const dx = mx - lastRippleX, dy = my - lastRippleY;
+    if (Math.hypot(dx, dy) > 90) {
+      spawnRipple(mx, my);
+      lastRippleX = mx; lastRippleY = my;
+    }
+  }, { passive: true });
+
+  window.addEventListener('mouseleave', () => blob.classList.remove('visible'));
+  window.addEventListener('mouseenter', () => blob.classList.add('visible'));
+
+  window.addEventListener('mousedown', () => blob.classList.add('press'));
+  window.addEventListener('mouseup', () => blob.classList.remove('press'));
+
+  function spawnRipple(x, y) {
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    r.style.transform = `translate(${x}px, ${y}px) scale(1)`;
+    document.body.appendChild(r);
+    requestAnimationFrame(() => {
+      r.style.transform = `translate(${x}px, ${y}px) scale(6.5)`;
+      r.classList.add('grow');
+    });
+    setTimeout(() => r.remove(), 1200);
+  }
+
+  const hoverTargets = document.querySelectorAll('a, button, .cta, .card, .nav-cta');
+  hoverTargets.forEach((el) => {
+    el.addEventListener('mouseenter', () => blob.classList.add('hover'));
+    el.addEventListener('mouseleave', () => blob.classList.remove('hover'));
+  });
+
+  // Idle micro-ripples: even without movement, let the blob breathe a
+  // ripple every couple seconds so the hero doesn't feel static.
+  setInterval(() => {
+    if (performance.now() - lastMoveT > 2200 && started) spawnRipple(bx, by);
+  }, 2600);
+
+  function frame() {
+    const dx = mx - bx, dy = my - by;
+    bx += dx * 0.16;
+    by += dy * 0.16;
+
+    const speed = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+    const stretch = Math.min(speed * 0.012, 0.55);
+    const sx = 1 + stretch, sy = 1 - stretch * 0.6;
+
+    blob.style.transform =
+      `translate3d(${bx}px, ${by}px, 0) rotate(${angle}rad) scale(${sx}, ${sy}) rotate(${-angle}rad)`;
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Section theming: swap cursor/ripple colors between the dark sky
+  // sections and the light cream sections as they cross viewport center.
+  const themedSections = document.querySelectorAll('[data-cursor]');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        document.documentElement.setAttribute('data-cursor-theme', entry.target.dataset.cursor);
+      }
+    });
+  }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+  themedSections.forEach((s) => io.observe(s));
+})();
 </script>
 </body>
 </html>
