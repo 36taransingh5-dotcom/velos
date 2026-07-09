@@ -8,6 +8,7 @@ const db = createDb(process.env.VELOS_DB ?? 'velos.db');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(new URL('../site', import.meta.url).pathname));
 
 app.post('/evaluate', (req, res) => {
   const validation = validateRequest(req.body);
