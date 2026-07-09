@@ -306,18 +306,8 @@
   .liquid-cursor.hover { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
   .liquid-cursor.press { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
 
-  .ripple {
-    position: fixed; top: 0; left: 0; width: 8px; height: 8px;
-    margin: -4px 0 0 -4px;
-    border-radius: 50%; pointer-events: none; z-index: 9998;
-    border: 1px solid var(--cursor-ring);
-    opacity: .4; transform: scale(1);
-    transition: transform 1.1s cubic-bezier(.15,.6,.25,1), opacity 1.1s ease;
-  }
-  .ripple.grow { transform: scale(3.5); opacity: 0; }
-
   @media (pointer: coarse), (prefers-reduced-motion: reduce) {
-    .liquid-cursor, .ripple { display: none; }
+    .liquid-cursor { display: none; }
   }
 </style>
 </head>
@@ -453,9 +443,9 @@ async function run(){
 run();
 
 // Liquid mercury cursor: a chrome blob that lags the pointer with spring
-// easing, squishes along its direction of travel, and drops expanding
-// ripple rings as it moves — same idea as the reference site's fluid
-// cursor, recolored to this site's chrome/sky palette per section.
+// easing and squishes along its direction of travel — same idea as the
+// reference site's fluid cursor, recolored to this site's chrome/sky
+// palette per section.
 (function () {
   if (!window.matchMedia('(pointer: fine)').matches) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -465,20 +455,11 @@ run();
 
   let mx = window.innerWidth / 2, my = window.innerHeight / 2;
   let bx = mx, by = my;
-  let lastRippleX = mx, lastRippleY = my;
-  let lastMoveT = performance.now();
   let started = false;
 
   window.addEventListener('mousemove', (e) => {
     mx = e.clientX; my = e.clientY;
-    lastMoveT = performance.now();
     if (!started) { bx = mx; by = my; started = true; blob.classList.add('visible'); }
-
-    const dx = mx - lastRippleX, dy = my - lastRippleY;
-    if (Math.hypot(dx, dy) > 220) {
-      spawnRipple(mx, my);
-      lastRippleX = mx; lastRippleY = my;
-    }
   }, { passive: true });
 
   window.addEventListener('mouseleave', () => blob.classList.remove('visible'));
@@ -487,29 +468,11 @@ run();
   window.addEventListener('mousedown', () => blob.classList.add('press'));
   window.addEventListener('mouseup', () => blob.classList.remove('press'));
 
-  function spawnRipple(x, y) {
-    const r = document.createElement('div');
-    r.className = 'ripple';
-    r.style.transform = `translate(${x}px, ${y}px) scale(1)`;
-    document.body.appendChild(r);
-    requestAnimationFrame(() => {
-      r.style.transform = `translate(${x}px, ${y}px) scale(3.5)`;
-      r.classList.add('grow');
-    });
-    setTimeout(() => r.remove(), 1200);
-  }
-
   const hoverTargets = document.querySelectorAll('a, button, .cta, .card, .nav-cta');
   hoverTargets.forEach((el) => {
     el.addEventListener('mouseenter', () => blob.classList.add('hover'));
     el.addEventListener('mouseleave', () => blob.classList.remove('hover'));
   });
-
-  // Idle micro-ripples: even without movement, let the blob breathe a
-  // ripple every couple seconds so the hero doesn't feel static.
-  setInterval(() => {
-    if (performance.now() - lastMoveT > 2200 && started) spawnRipple(bx, by);
-  }, 2600);
 
   function frame() {
     const dx = mx - bx, dy = my - by;
