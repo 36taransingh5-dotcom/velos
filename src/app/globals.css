@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+:root {
+  --sky-top: #0b3a6f;
+  --sky-mid: #2a6db5;
+  --sky-low: #8fc3e8;
+  --ink: #101418;
+  --paper: #f7f5f0;
+  --accent: #e8412c;
+  --pill: #12241c;
+  --ok: #1b7a4b;
+  --warn: #b07711;
+}
+
+@theme inline {
+  --color-sky-top: var(--sky-top);
+  --color-sky-mid: var(--sky-mid);
+  --color-sky-low: var(--sky-low);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-accent: var(--accent);
+  --color-pill: var(--pill);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), Georgia, serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Centered shell for Clerk auth pages */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 108%, rgba(255, 255, 255, 0.85), transparent 60%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-low) 100%);
+}
+
+/* Mono section label, used across dashboard cards */
+.tag-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}

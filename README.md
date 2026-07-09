@@ -1,75 +1,94 @@
 # Velos
 
-The financial control layer that lets companies safely give AI agents spending power. Velos is **not** a payment processor — it's a policy engine. An agent asks before it spends; Velos answers approved, denied, or human approval required, explains why, and keeps an audit log.
+The financial control layer for AI agents. Velos sits between agents and money: every spending request passes through `POST /api/v1/evaluate`, gets an approved / denied / human-approval-required verdict with a plain-English explanation, and lands in an immutable audit log.
 
-> **MVP status:** Velos is currently *advisory* — it returns a verdict, but enforcement is up to the calling payment system. Inline enforcement is on the roadmap.
+**Multi-tenant SaaS**: sign up, create policies, mint API keys, point your agents at the API (or the built-in MCP server).
 
-## Quick start
+## Stack
+
+- **Next.js App Router** — dashboard + API in one deploy (Vercel)
+- **Clerk** — auth with organizations
+- **Neon Postgres + Drizzle** — policies, keys, decisions
+- **Stripe** — Free (500 decisions/mo, 1 policy) → Pro ($49/mo, unlimited)
+- **MCP** — native `evaluate_spend` / `check_decision` tools at `/api/mcp`
+
+## Local setup
 
 ```bash
 npm install
-npm start
+cp .env.example .env.local   # then fill it in (see below)
+npm run db:push              # create tables in Neon
+npm run dev
 ```
 
-Server runs at `http://localhost:3000`. Configure the policy in [policy.json](policy.json).
+### 1. Neon (database)
 
-## API
+1. [neon.tech](https://neon.tech) → sign up → **Create project** (name: velos)
+2. Copy the **connection string** → `DATABASE_URL`
+3. `npm run db:push` creates the tables
 
-### `POST /evaluate`
+### 2. Clerk (auth)
 
-Ask Velos whether an agent may spend.
+1. [clerk.com](https://clerk.com) → sign up → **Create application** (name: Velos)
+2. Enable **Email** + **Google** sign-in
+3. Copy **Publishable key** → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, **Secret key** → `CLERK_SECRET_KEY`
+4. In Clerk dashboard → **Organizations** → enable organizations
+
+### 3. Stripe (billing)
+
+1. [stripe.com](https://stripe.com) → sign up (test mode is fine)
+2. **Developers → API keys** → copy **Secret key** → `STRIPE_SECRET_KEY`
+3. **Product catalog → Add product**: "Velos Pro", $49/month recurring → copy the **price id** → `STRIPE_PRO_PRICE_ID`
+4. Webhook (local): `stripe listen --forward-to localhost:3000/api/webhooks/stripe` → `STRIPE_WEBHOOK_SECRET`
+5. Webhook (prod): **Developers → Webhooks → Add endpoint** `https://<your-domain>/api/webhooks/stripe`, events: `checkout.session.completed`, `customer.subscription.deleted`
+
+## Agent API
 
 ```bash
-curl -X POST http://localhost:3000/evaluate \
+# Evaluate a spend (API key from the dashboard → api keys)
+curl -X POST https://<host>/api/v1/evaluate \
+  -H "Authorization: Bearer vk_..." \
   -H "Content-Type: application/json" \
-  -d '{"agent": "research-bot", "vendor": "OpenAI", "amount": 42.50, "reason": "API credits for embeddings"}'
+  -d '{"agent": "research-bot", "vendor": "OpenAI", "amount": 42.50, "reason": "embeddings"}'
+
+# → { "id": "...", "decision": "approved", "policy": "Default", "explanation": "...", "created_at": "..." }
+
+# Poll an escalated decision
+curl https://<host>/api/v1/decisions/<id> -H "Authorization: Bearer vk_..."
+# → { "status": "pending" | "approved" | "denied", ... }
+
+# Audit log
+curl https://<host>/api/v1/decisions -H "Authorization: Bearer vk_..."
 ```
+
+Decision order, first match wins:
+
+1. Vendor not on the policy's allowlist → **denied**
+2. Amount exceeds remaining monthly budget → **denied**
+3. Amount under the auto-approve threshold → **approved**
+4. Otherwise → **human_approval_required** (resolve in dashboard → approvals)
+
+Budget counts auto-approved and human-approved spend; pending requests don't reserve budget. Policies match agents by explicit assignment first, then the org's default policy.
+
+## MCP server
+
+Point any MCP client at:
 
 ```json
 {
-  "id": 1,
-  "decision": "approved",
-  "policy": "Default Policy",
-  "explanation": "Auto-approved: $42.50 is under the $100.00 auto-approval threshold and within budget.",
-  "created_at": "2026-07-09T18:00:00.000Z"
+  "url": "https://<host>/api/mcp",
+  "headers": { "Authorization": "Bearer vk_..." }
 }
 ```
 
-Decisions, first match wins:
-
-1. Vendor not on `allowed_vendors` → **denied**
-2. Amount exceeds remaining monthly budget → **denied**
-3. Amount under `auto_approve_under` → **approved**
-4. Otherwise → **human_approval_required**
-
-Approved amounts count against the monthly budget immediately.
-
-Invalid input (missing agent/vendor, non-positive amount, malformed JSON) returns `400` with an `errors` array.
-
-### `GET /decisions`
-
-Audit log — last 100 decisions, newest first.
-
-### `GET /policy`
-
-Current policy plus live `month_to_date_spend` and `remaining_budget`.
+Tools: `evaluate_spend(agent, vendor, amount, reason?)`, `check_decision(id)`.
 
 ## Tests
 
 ```bash
-npm test
+npm test        # engine + validation unit tests
 ```
 
-## Deploying
+## Deploy (Vercel)
 
-The app is split so it runs the same way locally and on Vercel:
-
-- [src/app.js](src/app.js) — the Express app (routes, no `listen()`).
-- [src/server.js](src/server.js) — local dev entry, calls `app.listen()`. Used by `npm start`.
-- [api/index.js](api/index.js) — Vercel serverless entry, wraps the same app as a function handler.
-- [public/](public) — the landing page. Vercel serves this directory as static/CDN content automatically; Express serves it the same way locally.
-- [vercel.json](vercel.json) — rewrites `/evaluate`, `/decisions`, `/policy` to the serverless function (everything else falls through to `public/`).
-
-Push to a branch connected to a Vercel project and it deploys with no other config.
-
-**Audit log persistence on Vercel:** serverless functions have a read-only filesystem outside `/tmp`, and `/tmp` is wiped between cold starts and not shared across concurrent instances. The SQLite audit log still works — reads and writes succeed — but on Vercel it's only reliable *within a single warm invocation*, not as a durable log across requests. Locally (`npm start`), the same file (`velos.db`) persists normally on disk. For a production audit log that needs to survive across serverless instances, swap `src/db.js` for a hosted database (Vercel Postgres, Turso, Neon, etc.) — the `createDb`/`insertDecision`/`monthToDateSpend`/`listDecisions` functions are the only place that would need to change.
+Push to the connected branch. Set all `.env.example` vars in Vercel → Project → Settings → Environment Variables. `NEXT_PUBLIC_APP_URL` = your production URL.

@@ -1,6 +1,0 @@
-{
-  "name": "Default Policy",
-  "monthly_budget": 2000,
-  "auto_approve_under": 100,
-  "allowed_vendors": ["OpenAI", "Anthropic", "ElevenLabs"]
-}
