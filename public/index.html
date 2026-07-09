@@ -278,33 +278,34 @@
 
   /* ---------- LIQUID CURSOR ---------- */
   :root {
-    --cursor-glow: rgba(140,190,230,.35);
-    --cursor-ring: rgba(255,255,255,.45);
-    --cursor-fill: rgba(255,255,255,.5);
+    --cursor-glow: rgba(140,190,230,.55);
   }
   html[data-cursor-theme="light"] {
-    --cursor-glow: rgba(232,65,44,.2);
-    --cursor-ring: rgba(16,20,24,.3);
-    --cursor-fill: rgba(16,20,24,.35);
+    --cursor-glow: rgba(232,65,44,.35);
   }
   @media (pointer: fine) {
     body.liquid-on, body.liquid-on a, body.liquid-on button { cursor: none; }
   }
-  /* A small, quiet dot rather than a big glowing orb — just enough to
-     feel alive without drawing attention to itself. */
+  /* mix-blend-mode: difference inverts whatever is underneath, so the
+     blob reads clearly whether it's over the dark sky or the cream
+     sections and gives that chromatic-shift feel as it crosses colors
+     and swells over a CTA. */
   .liquid-cursor {
-    position: fixed; top: 0; left: 0; width: 14px; height: 14px;
-    margin: -7px 0 0 -7px;
+    position: fixed; top: 0; left: 0; width: 46px; height: 46px;
+    margin: -23px 0 0 -23px;
     border-radius: 50%; pointer-events: none; z-index: 9999;
-    background: radial-gradient(circle at 35% 30%, var(--cursor-fill) 0%, var(--cursor-fill) 55%, transparent 80%);
-    box-shadow: 0 0 8px 1px var(--cursor-glow);
+    background: radial-gradient(circle at 32% 28%,
+      #ffffff 0%, #ffffff 30%, rgba(255,255,255,.92) 48%,
+      rgba(255,255,255,.55) 68%, rgba(255,255,255,0) 82%);
+    box-shadow: 0 0 30px 6px var(--cursor-glow), inset 0 0 10px rgba(255,255,255,.4);
+    mix-blend-mode: difference;
     will-change: transform, width, height;
     opacity: 0;
-    transition: opacity .25s ease, width .28s cubic-bezier(.2,.9,.3,1.3), height .28s cubic-bezier(.2,.9,.3,1.3), box-shadow .3s ease;
+    transition: opacity .25s ease, width .32s cubic-bezier(.2,.9,.3,1.3), height .32s cubic-bezier(.2,.9,.3,1.3), box-shadow .3s ease;
   }
   .liquid-cursor.visible { opacity: 1; }
-  .liquid-cursor.hover { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
-  .liquid-cursor.press { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+  .liquid-cursor.hover { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+  .liquid-cursor.press { width: 32px; height: 32px; margin: -16px 0 0 -16px; }
 
   @media (pointer: coarse), (prefers-reduced-motion: reduce) {
     .liquid-cursor { display: none; }
