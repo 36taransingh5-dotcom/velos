@@ -278,46 +278,43 @@
 
   /* ---------- LIQUID CURSOR ---------- */
   :root {
-    --cursor-glow: rgba(140,190,230,.55);
-    --cursor-ring: rgba(255,255,255,.8);
+    --cursor-glow: rgba(140,190,230,.35);
+    --cursor-ring: rgba(255,255,255,.45);
+    --cursor-fill: rgba(255,255,255,.5);
   }
   html[data-cursor-theme="light"] {
-    --cursor-glow: rgba(232,65,44,.35);
-    --cursor-ring: rgba(16,20,24,.55);
+    --cursor-glow: rgba(232,65,44,.2);
+    --cursor-ring: rgba(16,20,24,.3);
+    --cursor-fill: rgba(16,20,24,.35);
   }
   @media (pointer: fine) {
     body.liquid-on, body.liquid-on a, body.liquid-on button { cursor: none; }
   }
-  /* mix-blend-mode: difference inverts whatever is underneath, so the
-     blob reads clearly whether it's over the dark sky or the cream
-     sections — no per-theme color swap needed for the core itself. */
+  /* A small, quiet dot rather than a big glowing orb — just enough to
+     feel alive without drawing attention to itself. */
   .liquid-cursor {
-    position: fixed; top: 0; left: 0; width: 46px; height: 46px;
-    margin: -23px 0 0 -23px;
+    position: fixed; top: 0; left: 0; width: 14px; height: 14px;
+    margin: -7px 0 0 -7px;
     border-radius: 50%; pointer-events: none; z-index: 9999;
-    background: radial-gradient(circle at 32% 28%,
-      #ffffff 0%, #ffffff 30%, rgba(255,255,255,.92) 48%,
-      rgba(255,255,255,.55) 68%, rgba(255,255,255,0) 82%);
-    box-shadow: 0 0 30px 6px var(--cursor-glow), inset 0 0 10px rgba(255,255,255,.4);
-    mix-blend-mode: difference;
+    background: radial-gradient(circle at 35% 30%, var(--cursor-fill) 0%, var(--cursor-fill) 55%, transparent 80%);
+    box-shadow: 0 0 8px 1px var(--cursor-glow);
     will-change: transform, width, height;
     opacity: 0;
-    transition: opacity .25s ease, width .32s cubic-bezier(.2,.9,.3,1.3), height .32s cubic-bezier(.2,.9,.3,1.3), box-shadow .3s ease;
+    transition: opacity .25s ease, width .28s cubic-bezier(.2,.9,.3,1.3), height .28s cubic-bezier(.2,.9,.3,1.3), box-shadow .3s ease;
   }
   .liquid-cursor.visible { opacity: 1; }
-  .liquid-cursor.hover { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
-  .liquid-cursor.press { width: 32px; height: 32px; margin: -16px 0 0 -16px; }
+  .liquid-cursor.hover { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+  .liquid-cursor.press { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
 
   .ripple {
-    position: fixed; top: 0; left: 0; width: 12px; height: 12px;
-    margin: -6px 0 0 -6px;
+    position: fixed; top: 0; left: 0; width: 8px; height: 8px;
+    margin: -4px 0 0 -4px;
     border-radius: 50%; pointer-events: none; z-index: 9998;
-    border: 1.5px solid var(--cursor-ring);
-    box-shadow: 0 0 12px 1px var(--cursor-glow);
-    opacity: .8; transform: scale(1);
+    border: 1px solid var(--cursor-ring);
+    opacity: .4; transform: scale(1);
     transition: transform 1.1s cubic-bezier(.15,.6,.25,1), opacity 1.1s ease;
   }
-  .ripple.grow { transform: scale(7); opacity: 0; }
+  .ripple.grow { transform: scale(3.5); opacity: 0; }
 
   @media (pointer: coarse), (prefers-reduced-motion: reduce) {
     .liquid-cursor, .ripple { display: none; }
@@ -478,7 +475,7 @@ run();
     if (!started) { bx = mx; by = my; started = true; blob.classList.add('visible'); }
 
     const dx = mx - lastRippleX, dy = my - lastRippleY;
-    if (Math.hypot(dx, dy) > 90) {
+    if (Math.hypot(dx, dy) > 220) {
       spawnRipple(mx, my);
       lastRippleX = mx; lastRippleY = my;
     }
@@ -496,7 +493,7 @@ run();
     r.style.transform = `translate(${x}px, ${y}px) scale(1)`;
     document.body.appendChild(r);
     requestAnimationFrame(() => {
-      r.style.transform = `translate(${x}px, ${y}px) scale(6.5)`;
+      r.style.transform = `translate(${x}px, ${y}px) scale(3.5)`;
       r.classList.add('grow');
     });
     setTimeout(() => r.remove(), 1200);
