@@ -70,18 +70,67 @@ Decision order, first match wins:
 
 Budget counts auto-approved and human-approved spend; pending requests don't reserve budget. Policies match agents by explicit assignment first, then the org's default policy.
 
-## MCP server
+## Connect an agent or IDE (MCP)
 
-Point any MCP client at:
+Velos ships a native MCP server so any MCP-capable client gets two tools:
+
+- `evaluate_spend(agent, vendor, amount, reason?)` — ask before spending
+- `check_decision(id)` — poll an escalated decision
+
+Endpoint (streamable HTTP): `https://<host>/api/mcp`
+Auth: `Authorization: Bearer vk_...` (an API key from the dashboard).
+
+### Claude Code
+
+```bash
+claude mcp add --transport http velos https://velos-chi.vercel.app/api/mcp \
+  --header "Authorization: Bearer vk_..."
+```
+
+### Cursor / Windsurf
+
+`.cursor/mcp.json` (or the Windsurf equivalent):
 
 ```json
 {
-  "url": "https://<host>/api/mcp",
-  "headers": { "Authorization": "Bearer vk_..." }
+  "mcpServers": {
+    "velos": {
+      "url": "https://velos-chi.vercel.app/api/mcp",
+      "headers": { "Authorization": "Bearer vk_..." }
+    }
+  }
 }
 ```
 
-Tools: `evaluate_spend(agent, vendor, amount, reason?)`, `check_decision(id)`.
+### Codex / Claude Desktop (stdio-only, via the mcp-remote bridge)
+
+These clients speak stdio, so they connect through the `mcp-remote` bridge.
+
+Codex — `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.velos]
+command = "npx"
+args = ["-y", "mcp-remote", "https://velos-chi.vercel.app/api/mcp", "--header", "Authorization: Bearer vk_..."]
+```
+
+Claude Desktop — `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "velos": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://velos-chi.vercel.app/api/mcp", "--header", "Authorization: Bearer vk_..."]
+    }
+  }
+}
+```
+
+### No MCP? Just call the REST API
+
+Any agent framework (LangChain, CrewAI, OpenAI Agents SDK) can skip MCP and
+`POST /api/v1/evaluate` directly — see [Agent API](#agent-api) above.
 
 ## Tests
 
