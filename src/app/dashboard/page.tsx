@@ -135,7 +135,14 @@ export default async function OverviewPage() {
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-ink/50">
                       {d.createdAt.toISOString().slice(0, 16).replace('T', ' ')}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">{d.agent}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      {d.agent}
+                      <span
+                        className={`ml-2 rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wide ${d.source === 'card' ? 'bg-sky-mid/15 text-sky-mid' : 'bg-ink/5 text-ink/40'}`}
+                      >
+                        {d.source === 'card' ? 'card' : 'api'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{d.vendor}</td>
                     <td className="px-4 py-3 text-right font-mono text-xs">{usd(Number(d.amount))}</td>
                     <td className="px-4 py-3">

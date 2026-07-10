@@ -4,6 +4,7 @@ import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 const nav = [
   { href: '/dashboard', label: 'overview' },
   { href: '/dashboard/approvals', label: 'approvals' },
+  { href: '/dashboard/cards', label: 'cards' },
   { href: '/dashboard/policies', label: 'policies' },
   { href: '/dashboard/keys', label: 'api keys' },
   { href: '/dashboard/billing', label: 'billing' },

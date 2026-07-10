@@ -4,8 +4,9 @@ import {
   FREE_TIER_POLICY_LIMIT,
   getOrgPlan,
   monthlyDecisionCount,
+  stripeConfigured,
 } from '@/lib/store';
-import { startCheckout, openPortal } from './actions';
+import { startCheckout, openPortal, devTogglePlan } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,25 @@ export default async function BillingPage({
     monthlyDecisionCount(orgId),
     searchParams,
   ]);
+  const stripeReady = stripeConfigured();
 
   return (
     <div className="space-y-10">
       <h1 className="font-serif text-4xl">billing</h1>
+
+      {!stripeReady && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-[#d8d4ca] bg-white p-4">
+          <p className="text-sm text-ink/60">
+            <span className="font-mono text-[11px] uppercase text-warn">dev mode</span> — Stripe
+            isn&apos;t connected, so checkout is inactive. Toggle the plan to test gating.
+          </p>
+          <form action={devTogglePlan}>
+            <button className="rounded-full border border-ink px-4 py-2 text-sm font-medium transition-transform hover:scale-105">
+              {plan === 'pro' ? 'Switch to Free' : 'Simulate Pro upgrade'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {params.upgraded && plan === 'pro' && (
         <p className="rounded-lg border border-ok/40 bg-ok/5 p-4 text-sm text-ok">
@@ -69,7 +85,11 @@ export default async function BillingPage({
             <li>· Full audit log</li>
             <li>· MCP server access</li>
           </ul>
-          {plan === 'pro' ? (
+          {!stripeReady ? (
+            <p className="mt-6 font-mono text-xs text-ink/40">
+              Connect Stripe to enable self-serve checkout.
+            </p>
+          ) : plan === 'pro' ? (
             <form action={openPortal} className="mt-6">
               <button className="rounded-full border border-ink px-6 py-2.5 font-medium transition-transform hover:scale-105">
                 Manage subscription

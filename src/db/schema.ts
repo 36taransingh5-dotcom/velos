@@ -65,6 +65,34 @@ export const apiKeys = pgTable(
   (t) => [index('api_keys_org_idx').on(t.orgId)],
 );
 
+// Where a decision originated:
+//   'api'  — the agent asked first via /evaluate or MCP (an intent)
+//   'card' — a live card authorization hit the enforcement webhook
+export const sourceEnum = pgEnum('decision_source', ['api', 'card']);
+
+export const cardStatusEnum = pgEnum('card_status', ['active', 'frozen']);
+
+/**
+ * One Velos-issued virtual card per agent. In simulator mode stripeCardId
+ * is a synthetic id; once Stripe Issuing is wired it holds the real card id.
+ * The card is the credential the agent holds instead of real money — every
+ * charge on it routes through Velos's authorization webhook.
+ */
+export const agentCards = pgTable(
+  'agent_cards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: text('org_id').notNull(),
+    agent: text('agent').notNull(),
+    last4: text('last4').notNull(),
+    // Synthetic (sim_...) until real Stripe Issuing is connected.
+    stripeCardId: text('stripe_card_id'),
+    status: cardStatusEnum('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('agent_cards_org_idx').on(t.orgId)],
+);
+
 export const decisions = pgTable(
   'decisions',
   {
@@ -86,11 +114,23 @@ export const decisions = pgTable(
     resolution: resolutionEnum('resolution'),
     resolvedBy: text('resolved_by'),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    // Enforcement-rail fields.
+    source: sourceEnum('source').notNull().default('api'),
+    cardId: uuid('card_id'),
+    // The card-network / simulator authorization id when this decision came
+    // from (or was settled by) a live charge.
+    authorizationId: text('authorization_id'),
+    // When a card charge is matched to a prior 'api' intent, this points at
+    // that intent row. The intent keeps counting budget; the charge does not
+    // create a second budget-counting row.
+    matchedDecisionId: uuid('matched_decision_id'),
+    matchedAt: timestamp('matched_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index('decisions_org_created_idx').on(t.orgId, t.createdAt),
     index('decisions_org_decision_idx').on(t.orgId, t.decision),
+    index('decisions_intent_match_idx').on(t.orgId, t.agent, t.decision),
   ],
 );
 
@@ -108,3 +148,5 @@ export type ApiKey = typeof apiKeys.$inferSelect;
 export type Decision = typeof decisions.$inferSelect;
 export type NewDecision = typeof decisions.$inferInsert;
 export type OrgSettings = typeof orgSettings.$inferSelect;
+export type AgentCard = typeof agentCards.$inferSelect;
+export type NewAgentCard = typeof agentCards.$inferInsert;

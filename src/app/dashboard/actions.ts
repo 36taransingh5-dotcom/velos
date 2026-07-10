@@ -5,7 +5,17 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 import { db, policies, apiKeys } from '@/db';
 import { generateKey } from '@/lib/keys';
-import { FREE_TIER_POLICY_LIMIT, getOrgPlan, listPolicies, resolveDecision } from '@/lib/store';
+import {
+  FREE_TIER_POLICY_LIMIT,
+  getCard,
+  getOrgPlan,
+  issueCard,
+  listPolicies,
+  resolveDecision,
+  setCardStatus,
+} from '@/lib/store';
+import { getOrIssueCardForAgent } from '@/lib/cards';
+import { authorizeCharge, type AuthorizationResult } from '@/lib/authorization';
 
 /** Every dashboard mutation is scoped to the active Clerk org. */
 async function requireOrg(): Promise<{ orgId: string; userId: string }> {
@@ -151,4 +161,62 @@ export async function revokeApiKey(formData: FormData) {
     .set({ revokedAt: new Date() })
     .where(and(eq(apiKeys.id, id), eq(apiKeys.orgId, orgId)));
   revalidatePath('/dashboard/keys');
+}
+
+// ── Cards ────────────────────────────────────────────────────────
+
+export async function issueCardAction(formData: FormData) {
+  const { orgId } = await requireOrg();
+  const agent = String(formData.get('agent') ?? '').trim();
+  if (!agent) return;
+  await issueCard(orgId, agent);
+  revalidatePath('/dashboard/cards');
+}
+
+export async function setCardFrozen(formData: FormData) {
+  const { orgId } = await requireOrg();
+  const id = String(formData.get('id') ?? '');
+  const frozen = formData.get('frozen') === 'true';
+  if (!id) return;
+  const card = await getCard(orgId, id);
+  if (!card) return;
+  await setCardStatus(orgId, id, frozen ? 'frozen' : 'active');
+  revalidatePath('/dashboard/cards');
+}
+
+/** Fire a synthetic card authorization at the enforcement gate from the UI. */
+export async function simulateCharge(
+  _prev: { result: AuthorizationResult | null; errors: string[] },
+  formData: FormData,
+): Promise<{ result: AuthorizationResult | null; errors: string[] }> {
+  const { orgId } = await requireOrg();
+  const agent = String(formData.get('agent') ?? '').trim();
+  const merchant = String(formData.get('merchant') ?? '').trim();
+  const amount = Number(formData.get('amount'));
+
+  const errors: string[] = [];
+  if (!agent) errors.push('Agent is required.');
+  if (!merchant) errors.push('Merchant is required.');
+  if (!Number.isFinite(amount) || amount <= 0) errors.push('Amount must be a positive number.');
+  if (errors.length) return { result: null, errors };
+
+  const card = await getOrIssueCardForAgent(orgId, agent);
+  const authorizationId = `sim_auth_${crypto.randomUUID().slice(0, 12)}`;
+  try {
+    const result = await authorizeCharge(card, { amount, merchant, authorizationId });
+    revalidatePath('/dashboard/cards');
+    revalidatePath('/dashboard');
+    return { result, errors: [] };
+  } catch {
+    return {
+      result: {
+        authorization: 'declined',
+        decision: 'denied',
+        explanation: 'Velos could not evaluate this charge, so it was declined (fail-closed).',
+        decisionId: null,
+        matchedIntent: false,
+      },
+      errors: [],
+    };
+  }
 }

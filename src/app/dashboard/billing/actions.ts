@@ -2,14 +2,30 @@
 
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db, orgSettings } from '@/db';
 import { stripe, appUrl } from '@/lib/stripe';
+import { getOrgPlan, setOrgPlan, stripeConfigured } from '@/lib/store';
 
 async function requireOrg(): Promise<string> {
   const { userId, orgId } = await auth();
   if (!userId) throw new Error('Not signed in.');
   return orgId ?? `user_${userId}`;
+}
+
+/**
+ * Dev-only plan toggle so plan gating is testable before Stripe is wired.
+ * Refuses to run once a real Stripe key is present — then billing must flow
+ * through Checkout so plan state stays in sync with the subscription.
+ */
+export async function devTogglePlan() {
+  if (stripeConfigured()) return;
+  const orgId = await requireOrg();
+  const current = await getOrgPlan(orgId);
+  await setOrgPlan(orgId, current === 'pro' ? 'free' : 'pro');
+  revalidatePath('/dashboard/billing');
+  revalidatePath('/dashboard');
 }
 
 async function settingsFor(orgId: string) {
