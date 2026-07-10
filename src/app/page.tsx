@@ -18,9 +18,14 @@ export default function LandingPage() {
           <span className="logo">
             <span className="tick">+</span>velos
           </span>
-          <Link className="nav-cta" href="/sign-up">
-            get access
-          </Link>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '20px' }}>
+            <Link className="nav-login" href="/sign-in">
+              log in
+            </Link>
+            <Link className="nav-cta" href="/sign-up">
+              get access
+            </Link>
+          </span>
         </nav>
 
         <div className="hero-inner">
@@ -104,12 +109,13 @@ export default function LandingPage() {
           </h2>
           <p>
             Your agent calls <span className="mono-note">POST /api/v1/evaluate</span> before any
-            purchase. Velos checks the policy and returns a decision your payment system can act
-            on.
+            purchase. Velos checks the policy and returns a decision — approved, denied, or held
+            for a human — that your payment flow can act on.
           </p>
           <p>
-            Agents on MCP? Velos ships a native MCP server — your agent gets{' '}
-            <span className="mono-note">evaluate_spend</span> as a tool, no glue code.
+            Within policy, it passes. Against it, Velos declines and flags it in your dashboard.
+            When it needs a human, the request waits in the approvals queue until someone taps
+            yes.
           </p>
         </div>
         <div className="codeblock">
@@ -144,6 +150,50 @@ export default function LandingPage() {
           </span>
           {'\n'}
           {'}'}
+        </div>
+      </section>
+
+      <section className="connect" data-cursor="light">
+        <div className="features-label">plug it in</div>
+        <h2>
+          drop it into the agent
+          <br />
+          <em>you already use</em>
+        </h2>
+        <p className="lead">
+          Velos ships a native MCP server. Connect Claude Code, Cursor, Codex, or Claude Desktop
+          and your agent gets <span className="mono-note">evaluate_spend</span> as a built-in tool —
+          it asks Velos before it spends. No SDK, no glue code.
+        </p>
+        <div className="clients">
+          <span className="client-chip">
+            <span className="dot" />
+            Claude Code
+          </span>
+          <span className="client-chip">
+            <span className="dot" />
+            Cursor
+          </span>
+          <span className="client-chip">
+            <span className="dot" />
+            Codex
+          </span>
+          <span className="client-chip">
+            <span className="dot" />
+            Claude Desktop
+          </span>
+          <span className="client-chip">
+            <span className="dot" />
+            any MCP client
+          </span>
+        </div>
+        <div className="codeblock">
+          <span className="c"># add velos to claude code</span>
+          {'\n'}claude mcp add --transport http velos \{'\n'}
+          {'  '}https://velos.dev/api/mcp \{'\n'}
+          {'  '}--header <span className="s">&quot;Authorization: Bearer vk_...&quot;</span>
+          {'\n\n'}
+          <span className="c"># your agent now has evaluate_spend + check_decision</span>
         </div>
       </section>
 
