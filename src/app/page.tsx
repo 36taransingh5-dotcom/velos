@@ -42,16 +42,16 @@ export default function LandingPage() {
           </div>
 
           <h1 className="chrome">
-            the internet&apos;s
+            the control layer
             <br />
-            <span className="ital">calmest</span> way to let
+            between AI agents
             <br />
-            AI agents spend
+            and <span className="ital">money</span>
           </h1>
 
           <p className="sub">
-            Agents can already write code, research and automate work. Companies still don&apos;t
-            trust them with money. Velos decides, explains, and keeps the receipts.
+            Every payment an AI agent tries to make passes through Velos first. It checks your
+            policies, then approves it, denies it, or asks a human — and logs every decision.
           </p>
 
           <Link className="cta" href="/sign-up">
