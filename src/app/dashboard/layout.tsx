@@ -15,8 +15,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-10 border-b border-[#e6e2da] bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/" className="font-mono text-lg font-bold lowercase tracking-tight">
-              <span className="text-accent">+</span>velos
+            <Link
+              href="/"
+              className="flex items-center gap-2 font-mono text-lg font-bold lowercase tracking-tight"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/velos-mark.png"
+                alt="Velos"
+                className="h-7 w-7 rounded-lg object-cover shadow-[0_2px_10px_rgba(40,130,210,0.45)]"
+              />
+              velos
             </Link>
             <nav className="flex items-center gap-5">
               {nav.map((item) => (

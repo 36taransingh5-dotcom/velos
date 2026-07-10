@@ -16,7 +16,9 @@ export default function LandingPage() {
 
         <nav className="nav">
           <span className="logo">
-            <span className="tick">+</span>velos
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/velos-mark.png" alt="Velos" className="logo-mark" />
+            velos
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '20px' }}>
             <Link className="nav-login" href="/sign-in">
@@ -210,7 +212,12 @@ export default function LandingPage() {
       </section>
 
       <footer data-cursor="dark">
-        <b>+velos</b> · the financial control layer for AI agents · © 2026
+        <span className="footer-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/velos-mark.png" alt="Velos" className="footer-mark" />
+          <b>velos</b>
+        </span>{' '}
+        · the financial control layer for AI agents · © 2026
       </footer>
     </>
   );

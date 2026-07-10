@@ -32,11 +32,17 @@
     box-shadow: 0 8px 30px rgba(8, 30, 60, .25);
   }
   .logo {
+    display: inline-flex; align-items: center; gap: 10px;
     font-family: var(--font-mono), monospace;
     font-weight: 700; font-size: 22px; letter-spacing: -1px;
     text-transform: lowercase;
   }
   .logo .tick { color: var(--accent); }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: block; object-fit: cover;
+    box-shadow: 0 2px 10px rgba(40, 130, 210, .45);
+  }
   .nav a.nav-cta {
     font-family: var(--font-mono), monospace; font-size: 13px;
     color: var(--ink); text-decoration: none;
@@ -271,6 +277,8 @@
     padding: 30px 20px; text-align: center;
   }
   footer b { color: #fff; }
+  .footer-logo { display: inline-flex; align-items: center; gap: 7px; vertical-align: middle; }
+  .footer-mark { width: 20px; height: 20px; border-radius: 5px; display: block; object-fit: cover; }
 
   @media (max-width: 860px) {
     .code-section { grid-template-columns: 1fr; gap: 36px; }
