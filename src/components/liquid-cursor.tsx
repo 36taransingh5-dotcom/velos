@@ -78,8 +78,8 @@ export function LiquidCursor() {
     const frame = () => {
       const dx = mx - bx;
       const dy = my - by;
-      bx += dx * 0.16;
-      by += dy * 0.16;
+      bx += dx * 0.24;
+      by += dy * 0.24;
 
       const speed = Math.hypot(dx, dy);
       const angle = Math.atan2(dy, dx);

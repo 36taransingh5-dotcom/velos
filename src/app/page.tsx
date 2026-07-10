@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LiquidCursor } from '@/components/liquid-cursor';
 import { CrtTerminal } from '@/components/crt-terminal';
+import { IntegrationTabs } from '@/components/integration-tabs';
 import './landing.css';
 
 export default function LandingPage() {
@@ -167,36 +168,7 @@ export default function LandingPage() {
           and your agent gets <span className="mono-note">evaluate_spend</span> as a built-in tool —
           it asks Velos before it spends. No SDK, no glue code.
         </p>
-        <div className="clients">
-          <span className="client-chip">
-            <span className="dot" />
-            Claude Code
-          </span>
-          <span className="client-chip">
-            <span className="dot" />
-            Cursor
-          </span>
-          <span className="client-chip">
-            <span className="dot" />
-            Codex
-          </span>
-          <span className="client-chip">
-            <span className="dot" />
-            Claude Desktop
-          </span>
-          <span className="client-chip">
-            <span className="dot" />
-            any MCP client
-          </span>
-        </div>
-        <div className="codeblock">
-          <span className="c"># add velos to claude code</span>
-          {'\n'}claude mcp add --transport http velos \{'\n'}
-          {'  '}https://velos.dev/api/mcp \{'\n'}
-          {'  '}--header <span className="s">&quot;Authorization: Bearer vk_...&quot;</span>
-          {'\n\n'}
-          <span className="c"># your agent now has evaluate_spend + check_decision</span>
-        </div>
+        <IntegrationTabs />
       </section>
 
       <section className="footer-cta" data-cursor="dark" id="access">
