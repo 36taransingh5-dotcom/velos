@@ -8,11 +8,14 @@ import { decisionStatus } from '@/lib/status';
 export const runtime = 'nodejs';
 
 /**
- * MCP server: gives any MCP-capable agent (Claude, etc.) native tools to
- * ask Velos before spending. Auth: Authorization: Bearer vk_... — the same
- * API keys as the REST API.
+ * MCP server: gives any MCP-capable agent (Claude Code, Cursor, etc.)
+ * native tools to ask Velos before spending. Auth: Authorization:
+ * Bearer vk_... — the same API keys as the REST API.
  *
- * Client config:
+ * Mounted at [transport] so mcp-handler serves streamable HTTP at
+ * /api/mcp and SSE at /api/sse (basePath below tells it the /api prefix).
+ *
+ * Client config (streamable HTTP):
  *   { "url": "https://<host>/api/mcp",
  *     "headers": { "Authorization": "Bearer vk_..." } }
  */
@@ -71,7 +74,7 @@ const handler = createMcpHandler((server) => {
       };
     },
   );
-});
+}, {}, { basePath: '/api' });
 
 function errorContent(message: string) {
   return { content: [{ type: 'text' as const, text: `Error: ${message}` }], isError: true };
