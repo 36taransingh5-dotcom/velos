@@ -27,6 +27,14 @@ export interface AuthorizationResult {
   matchedIntent: boolean;
 }
 
+// The decision (from reads) plus a thunk that performs the writes. The
+// real-time webhook responds to Stripe with `result` immediately and runs
+// `commit` afterwards (off the ~2s critical path); the simulator awaits both.
+export interface DecidedCharge {
+  result: AuthorizationResult;
+  commit: () => Promise<void>;
+}
+
 /**
  * A card auth carries only a merchant descriptor, not the clean vendor the
  * agent named. Map it back: if an allowed vendor name appears in the
@@ -42,8 +50,8 @@ function merchantToVendor(merchant: string, policy: Policy): string {
 }
 
 /**
- * The enforcement gate. A live charge on a Velos card lands here; we decide
- * approve/decline within the network's ~2s window.
+ * The enforcement gate. Reads only, returns the decision plus a `commit`
+ * thunk for the writes so callers control when persistence happens.
  *
  *   frozen card ─────────────► decline
  *   matches a recent intent ─► approve, settle the intent (no double budget)
@@ -52,77 +60,66 @@ function merchantToVendor(merchant: string, policy: Policy): string {
  *        denied   → decline (+ record)
  *        human    → decline the live charge, queue for approval + retry
  */
-export async function authorizeCharge(
-  card: AgentCard,
-  input: ChargeInput,
-): Promise<AuthorizationResult> {
+export async function decideCharge(card: AgentCard, input: ChargeInput): Promise<DecidedCharge> {
   const { orgId, agent } = card;
 
-  if (card.status === 'frozen') {
-    const rec = await recordDecision({
-      orgId,
-      policyId: null,
-      policyName: '—',
-      agent,
-      vendor: input.merchant,
-      amount: input.amount.toFixed(2),
-      reason: null,
-      decision: 'denied',
-      explanation: `Card ending ${card.last4} is frozen. Charge declined.`,
-      source: 'card',
-      cardId: card.id,
-      authorizationId: input.authorizationId,
-    });
-    return {
+  const declineNoWrite = (explanation: string): DecidedCharge => ({
+    result: {
       authorization: 'declined',
       decision: 'denied',
-      explanation: rec.explanation,
-      decisionId: rec.id,
+      explanation,
+      decisionId: null,
       matchedIntent: false,
-    };
+    },
+    commit: async () => {
+      await recordDecision({
+        orgId,
+        policyId: null,
+        policyName: '—',
+        agent,
+        vendor: input.merchant,
+        amount: input.amount.toFixed(2),
+        reason: null,
+        decision: 'denied',
+        explanation,
+        source: 'card',
+        cardId: card.id,
+        authorizationId: input.authorizationId,
+      });
+    },
+  });
+
+  if (card.status === 'frozen') {
+    return declineNoWrite(`Card ending ${card.last4} is frozen. Charge declined.`);
   }
 
-  // These two are independent — run them together to save a round-trip.
+  // Independent reads in parallel.
   const [policies, intent] = await Promise.all([
     listPolicies(orgId),
     findMatchingIntent(orgId, agent, input.amount),
   ]);
   const policy = matchPolicy(policies, agent);
+
   if (!policy) {
-    const rec = await recordDecision({
-      orgId,
-      policyId: null,
-      policyName: '—',
-      agent,
-      vendor: input.merchant,
-      amount: input.amount.toFixed(2),
-      reason: null,
-      decision: 'denied',
-      explanation:
-        'No policy matches this agent and no default policy exists. Charge declined.',
-      source: 'card',
-      cardId: card.id,
-      authorizationId: input.authorizationId,
-    });
-    return {
-      authorization: 'declined',
-      decision: 'denied',
-      explanation: rec.explanation,
-      decisionId: rec.id,
-      matchedIntent: false,
-    };
+    return declineNoWrite(
+      'No policy matches this agent and no default policy exists. Charge declined.',
+    );
   }
 
   // The agent asked first and we approved — honor that intent, don't
   // re-evaluate or double-count the budget.
   if (intent) {
-    await settleIntent(intent.id, input.authorizationId);
     return {
-      authorization: 'approved',
-      decision: 'approved',
-      explanation: `Approved — matched a pre-authorized request (${intent.vendor}). ${intent.explanation}`,
-      decisionId: intent.id,
-      matchedIntent: true,
+      result: {
+        authorization: 'approved',
+        decision: 'approved',
+        explanation: `Approved — matched a pre-authorized request (${intent.vendor}). ${intent.explanation}`,
+        decisionId: intent.id,
+        matchedIntent: true,
+      },
+      commit: async () => {
+        await settleIntent(intent.id, input.authorizationId);
+      },
     };
   }
 
@@ -131,31 +128,44 @@ export async function authorizeCharge(
   const spent = await monthToDateSpend(policy.id);
   const { decision, explanation } = evaluate(policy, { vendor, amount: input.amount }, spent);
 
-  const rec = await recordDecision({
-    orgId,
-    policyId: policy.id,
-    policyName: policy.name,
-    agent,
-    vendor,
-    amount: input.amount.toFixed(2),
-    reason: `card charge at "${input.merchant}"`,
-    decision,
-    explanation,
-    source: 'card',
-    cardId: card.id,
-    authorizationId: input.authorizationId,
-  });
-
   // Only an outright approval lets the live charge through. A human hold
   // declines now; the human approves in the dashboard and the agent retries,
   // which then matches this row as an intent.
   const authorization = decision === 'approved' ? 'approved' : 'declined';
 
   return {
-    authorization,
-    decision,
-    explanation,
-    decisionId: rec.id,
-    matchedIntent: false,
+    result: {
+      authorization,
+      decision,
+      explanation,
+      decisionId: null,
+      matchedIntent: false,
+    },
+    commit: async () => {
+      await recordDecision({
+        orgId,
+        policyId: policy.id,
+        policyName: policy.name,
+        agent,
+        vendor,
+        amount: input.amount.toFixed(2),
+        reason: `card charge at "${input.merchant}"`,
+        decision,
+        explanation,
+        source: 'card',
+        cardId: card.id,
+        authorizationId: input.authorizationId,
+      });
+    },
   };
+}
+
+/** Convenience for non-latency-sensitive callers (simulator, dashboard). */
+export async function authorizeCharge(
+  card: AgentCard,
+  input: ChargeInput,
+): Promise<AuthorizationResult> {
+  const { result, commit } = await decideCharge(card, input);
+  await commit();
+  return result;
 }

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
-import { authorizeCharge } from '@/lib/authorization';
+import { decideCharge } from '@/lib/authorization';
 import { getCardByStripeId } from '@/lib/store';
 
 export const runtime = 'nodejs';
@@ -48,36 +48,27 @@ export async function POST(req: Request) {
   const stripeCardId =
     typeof authorization.card === 'string' ? authorization.card : authorization.card?.id;
 
-  // Approve/decline explicitly via the API within the real-time window.
-  // This is version-robust, unlike relying on a magic response body.
+  // Real-time decision: Stripe reads `{ approved }` from this response and
+  // must have it within ~2s. Compute the verdict from reads only, respond
+  // immediately, and persist the audit row afterwards via after() so the
+  // DB write never sits on the critical path.
   try {
     const card = stripeCardId ? await getCardByStripeId(stripeCardId) : null;
     if (!card) {
-      await stripe().issuing.authorizations.decline(authorization.id);
-      return NextResponse.json({ received: true });
+      return NextResponse.json({ approved: false }); // unknown card → decline
     }
 
     // Stripe amounts are in the smallest currency unit (pence/cents).
     const amount = authorization.pending_request?.amount ?? authorization.amount;
-    const result = await authorizeCharge(card, {
+    const { result, commit } = await decideCharge(card, {
       amount: Math.abs(amount) / 100,
       merchant: authorization.merchant_data?.name ?? 'unknown merchant',
       authorizationId: authorization.id,
     });
 
-    if (result.authorization === 'approved') {
-      await stripe().issuing.authorizations.approve(authorization.id);
-    } else {
-      await stripe().issuing.authorizations.decline(authorization.id);
-    }
-    return NextResponse.json({ received: true });
+    after(commit); // audit write, off the response path
+    return NextResponse.json({ approved: result.authorization === 'approved' });
   } catch {
-    // Fail-closed: if anything errors, decline.
-    try {
-      await stripe().issuing.authorizations.decline(authorization.id);
-    } catch {
-      /* best effort */
-    }
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ approved: false }); // fail-closed
   }
 }
