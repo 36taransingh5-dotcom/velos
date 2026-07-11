@@ -132,6 +132,35 @@ Claude Desktop — `claude_desktop_config.json`:
 Any agent framework (LangChain, CrewAI, OpenAI Agents SDK) can skip MCP and
 `POST /api/v1/evaluate` directly — see [Agent API](#agent-api) above.
 
+## Enforcement rail (virtual cards)
+
+Beyond the advisory API, Velos can **gate real money**. Each agent gets a
+Stripe-issued virtual card; every charge hits Velos's real-time authorization
+webhook and is approved/declined by the same policy engine, at the network,
+within Stripe's ~2s window.
+
+- Simulator (no Stripe needed): `POST /api/v1/simulate-charge` with
+  `{ agent, merchant, amount }` and a `Bearer vk_...` key, or the "simulate a
+  charge" panel on the dashboard Cards page.
+- Real cards: `POST /api/webhooks/stripe-issuing` handles
+  `issuing_authorization.request`. Needs `STRIPE_SECRET_KEY` +
+  `STRIPE_ISSUING_WEBHOOK_SECRET`.
+
+Intent matching: an approved `/evaluate` call is settled in-place by the
+matching card charge, so budget is never double-counted.
+
+**Stripe Issuing gotchas (learned the hard way):**
+
+1. The webhook response **must** include a `Stripe-Version` header with a
+   supported API version — without it Stripe declines with `webhook_error`.
+2. Respond within ~2s. Keep `/api` routes out of Clerk middleware (extra edge
+   hop) and defer the audit-log write with `after()`.
+3. Fund the test Issuing balance in the dashboard or every charge dies at
+   `insufficient_funds` before reaching the webhook.
+4. New cards carry a default daily spending limit — raise it so the Velos
+   policy engine is the sole gate (else charges decline via
+   `authorization_controls`).
+
 ## Tests
 
 ```bash
