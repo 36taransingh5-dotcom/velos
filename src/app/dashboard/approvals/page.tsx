@@ -57,9 +57,18 @@ export default async function ApprovalsPage() {
         </div>
       )}
 
-      <p className="font-mono text-xs text-ink/40">
-        Agents poll <code>GET /api/v1/decisions/:id</code> — your verdict lands on their next poll.
-      </p>
+      <div className="font-mono text-xs text-ink/40">
+        <p>Approve here, or from inside the agent — both write the same record:</p>
+        <p className="mt-1">
+          · dashboard (this page) &nbsp;·&nbsp; API{' '}
+          <code>POST /api/v1/decisions/:id/resolve</code> &nbsp;·&nbsp; MCP{' '}
+          <code>resolve_decision</code>
+        </p>
+        <p className="mt-1">
+          Agents see the verdict on their next <code>check_decision</code> poll, then retry the
+          spend.
+        </p>
+      </div>
     </div>
   );
 }

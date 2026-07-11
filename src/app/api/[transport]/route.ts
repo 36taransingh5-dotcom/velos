@@ -2,7 +2,7 @@ import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { evaluateForOrg } from '@/lib/evaluate-service';
 import { orgForKey } from '@/lib/keys';
-import { getDecision } from '@/lib/store';
+import { getDecision, pendingDecisions, resolveDecision } from '@/lib/store';
 import { decisionStatus } from '@/lib/status';
 
 export const runtime = 'nodejs';
@@ -66,6 +66,59 @@ const handler = createMcpHandler((server) => {
                 explanation: row.explanation,
                 resolved_at: row.resolvedAt,
               },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'list_pending_approvals',
+    'List spending decisions that are escalated and waiting on a human. Surface these to your operator so they can approve or deny in-app with resolve_decision.',
+    {},
+    async (_args, extra) => {
+      const orgId = await orgFromAuth(extra.requestInfo?.headers);
+      if (!orgId) return errorContent('Invalid or missing Velos API key.');
+
+      const rows = await pendingDecisions(orgId);
+      const pending = rows.map((r) => ({
+        id: r.id,
+        agent: r.agent,
+        vendor: r.vendor,
+        amount: Number(r.amount),
+        reason: r.reason,
+        explanation: r.explanation,
+        created_at: r.createdAt,
+      }));
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(pending, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    'resolve_decision',
+    'Approve or deny an escalated spending decision. ONLY call this after a human operator has explicitly told you their decision — this is the human sign-off, not the agent deciding for itself. On approval, the agent can retry the spend and it will go through.',
+    {
+      id: z.string().uuid().describe('Decision id awaiting approval (from list_pending_approvals or evaluate_spend)'),
+      verdict: z.enum(['approved', 'denied']).describe('The human operator\'s decision'),
+    },
+    async ({ id, verdict }, extra) => {
+      const orgId = await orgFromAuth(extra.requestInfo?.headers);
+      if (!orgId) return errorContent('Invalid or missing Velos API key.');
+
+      const row = await resolveDecision(orgId, id, verdict, 'mcp');
+      if (!row) return errorContent('Decision not found, or it is not awaiting human approval.');
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              { id: row.id, status: decisionStatus(row), resolution: row.resolution },
               null,
               2,
             ),
