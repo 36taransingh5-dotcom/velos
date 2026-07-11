@@ -10,9 +10,12 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
+    // Everything except Next internals, static files, and /api routes.
+    // API routes (agent API, MCP, Stripe webhooks) do their own auth and
+    // must NOT pass through Clerk's edge middleware — the extra hop adds
+    // latency that breaks Stripe Issuing's ~2s real-time authorization
+    // window, and can alter the response Stripe reads.
+    '/((?!_next|api/|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/__clerk/:path*',
   ],
 };
