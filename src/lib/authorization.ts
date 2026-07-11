@@ -82,7 +82,11 @@ export async function authorizeCharge(
     };
   }
 
-  const policies = await listPolicies(orgId);
+  // These two are independent — run them together to save a round-trip.
+  const [policies, intent] = await Promise.all([
+    listPolicies(orgId),
+    findMatchingIntent(orgId, agent, input.amount),
+  ]);
   const policy = matchPolicy(policies, agent);
   if (!policy) {
     const rec = await recordDecision({
@@ -111,7 +115,6 @@ export async function authorizeCharge(
 
   // The agent asked first and we approved — honor that intent, don't
   // re-evaluate or double-count the budget.
-  const intent = await findMatchingIntent(orgId, agent, input.amount);
   if (intent) {
     await settleIntent(intent.id, input.authorizationId);
     return {

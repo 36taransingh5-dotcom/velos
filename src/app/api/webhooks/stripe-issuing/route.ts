@@ -48,14 +48,16 @@ export async function POST(req: Request) {
   const stripeCardId =
     typeof authorization.card === 'string' ? authorization.card : authorization.card?.id;
 
+  // Approve/decline explicitly via the API within the real-time window.
+  // This is version-robust, unlike relying on a magic response body.
   try {
     const card = stripeCardId ? await getCardByStripeId(stripeCardId) : null;
     if (!card) {
-      // Unknown card → decline. Never approve something we can't govern.
-      return NextResponse.json({ approved: false });
+      await stripe().issuing.authorizations.decline(authorization.id);
+      return NextResponse.json({ received: true });
     }
 
-    // Stripe amounts are in the smallest currency unit (cents).
+    // Stripe amounts are in the smallest currency unit (pence/cents).
     const amount = authorization.pending_request?.amount ?? authorization.amount;
     const result = await authorizeCharge(card, {
       amount: Math.abs(amount) / 100,
@@ -63,8 +65,19 @@ export async function POST(req: Request) {
       authorizationId: authorization.id,
     });
 
-    return NextResponse.json({ approved: result.authorization === 'approved' });
+    if (result.authorization === 'approved') {
+      await stripe().issuing.authorizations.approve(authorization.id);
+    } else {
+      await stripe().issuing.authorizations.decline(authorization.id);
+    }
+    return NextResponse.json({ received: true });
   } catch {
-    return NextResponse.json({ approved: false });
+    // Fail-closed: if anything errors, decline.
+    try {
+      await stripe().issuing.authorizations.decline(authorization.id);
+    } catch {
+      /* best effort */
+    }
+    return NextResponse.json({ received: true });
   }
 }
