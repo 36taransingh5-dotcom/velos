@@ -196,7 +196,8 @@
     margin-bottom: 64px; letter-spacing: -.5px;
   }
   .features h2 em { color: var(--accent); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  /* 2×2 so four cards fill evenly — no orphan card stretching a whole row. */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
   .card {
     background: #fff; border: 1px solid #e6e2da; border-radius: 10px;
     padding: 34px 30px;
@@ -356,6 +357,10 @@
     .code-section { grid-template-columns: 1fr; gap: 36px; }
     .nav { margin-bottom: 44px; }
     .intro { margin-left: 16px; margin-right: 16px; }
+  }
+
+  @media (max-width: 620px) {
+    .grid { grid-template-columns: 1fr; }
   }
 
   /* ---------- LIQUID CURSOR ---------- */
