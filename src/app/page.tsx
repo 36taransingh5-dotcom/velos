@@ -51,7 +51,8 @@ export default function LandingPage() {
 
           <p className="sub">
             Every payment an AI agent tries to make passes through Velos first. It checks your
-            policies, then approves it, denies it, or asks a human — and logs every decision.
+            policies, then approves it, denies it, or asks a human — and can decline the charge
+            at the card network itself. Every decision logged.
           </p>
 
           <Link className="cta" href="/sign-up">
@@ -85,19 +86,28 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="card">
-            <span className="tag">02 / Explainability</span>
-            <h3>Every decision has a why</h3>
+            <span className="tag">02 / Card Enforcement</span>
+            <h3>Declined at the network</h3>
             <p>
-              No black boxes. Each verdict ships with a plain-English explanation of the exact rule
-              that fired — the vendor, the budget math, the threshold.
+              Each agent holds a Velos-issued virtual card. Every charge hits the policy gate in
+              real time — out-of-policy spend is declined before the money moves, even if the
+              agent never asked.
             </p>
           </div>
           <div className="card">
-            <span className="tag">03 / Audit Log</span>
-            <h3>Receipts, forever</h3>
+            <span className="tag">03 / Human Approvals</span>
+            <h3>Yes from anywhere</h3>
             <p>
-              Every request is recorded whether it was approved or not. When finance asks &quot;what
-              did the agents buy in March?&quot; — you have the answer in one query.
+              Escalated spends wait for a human. Approve from the dashboard — or right inside
+              Claude Code or Cursor, without leaving the chat. Both write the same audit record.
+            </p>
+          </div>
+          <div className="card">
+            <span className="tag">04 / Receipts &amp; Reasons</span>
+            <h3>Every decision has a why</h3>
+            <p>
+              Each verdict is recorded with a plain-English explanation of the rule that fired.
+              When finance asks &quot;what did the agents buy in March?&quot; — one query answers.
             </p>
           </div>
         </div>
@@ -117,8 +127,8 @@ export default function LandingPage() {
           </p>
           <p>
             Within policy, it passes. Against it, Velos declines and flags it in your dashboard.
-            When it needs a human, the request waits in the approvals queue until someone taps
-            yes.
+            When it needs a human, the request waits — approve it from the dashboard, or right
+            inside the agent itself.
           </p>
         </div>
         <div className="codeblock">
@@ -156,6 +166,53 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="enforce" data-cursor="dark">
+        <div className="enforce-inner">
+          <div className="features-label">the airtight part</div>
+          <h2>
+            asking nicely is optional.
+            <br />
+            <em>the card isn&apos;t.</em>
+          </h2>
+          <p className="enforce-lead">
+            Each agent spends on a Velos-issued virtual card — never a raw company card. When a
+            charge hits the card network, Velos answers in the authorization window: matched to a
+            pre-approved request, it goes through. No matching intent, over budget, wrong vendor —
+            <b> declined before any money moves</b>. A rogue or jailbroken agent can&apos;t spend
+            around the policy, because the policy holds the card.
+          </p>
+          <div className="enforce-steps">
+            <div className="estep">
+              <span className="enum">1</span>
+              <h4>agent asks</h4>
+              <p>
+                <span className="mono-note-dark">evaluate_spend</span> — Velos approves the intent
+                against your policy.
+              </p>
+            </div>
+            <div className="estep">
+              <span className="enum">2</span>
+              <h4>card charges</h4>
+              <p>
+                The real charge hits the network. Velos matches it to the approved intent in the
+                authorization window.
+              </p>
+            </div>
+            <div className="estep">
+              <span className="enum">3</span>
+              <h4>gate decides</h4>
+              <p>
+                Matched → authorized. Unmatched or out of policy → <b>declined at the network</b>,
+                logged, and flagged.
+              </p>
+            </div>
+          </div>
+          <p className="enforce-note">
+            Live on real Stripe test authorizations today — rolling out with design partners.
+          </p>
+        </div>
+      </section>
+
       <section className="connect" data-cursor="light">
         <div className="features-label">plug it in</div>
         <h2>
@@ -166,7 +223,8 @@ export default function LandingPage() {
         <p className="lead">
           Velos ships a native MCP server. Connect Claude Code, Cursor, Codex, or Claude Desktop
           and your agent gets <span className="mono-note">evaluate_spend</span> as a built-in tool —
-          it asks Velos before it spends. No SDK, no glue code.
+          it asks Velos before it spends, and you approve escalations without leaving the chat. No
+          SDK, no glue code.
         </p>
         <IntegrationTabs />
       </section>

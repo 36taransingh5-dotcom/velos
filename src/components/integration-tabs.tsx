@@ -61,7 +61,9 @@ args = ["-y", "mcp-remote", "${ENDPOINT}", "--header", "Authorization: Bearer vk
     code: `Endpoint:  ${ENDPOINT}
 Auth:      Authorization: Bearer vk_...
 Tools:     evaluate_spend(agent, vendor, amount, reason?)
-           check_decision(id)`,
+           check_decision(id)
+           list_pending_approvals()
+           resolve_decision(id, verdict)   # human sign-off, in-chat`,
   },
 ];
 

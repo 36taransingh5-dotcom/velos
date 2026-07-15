@@ -33,6 +33,14 @@ const scenarios: Scenario[] = [
       '<span class="dim">$500 ≥ $100 threshold. within budget —\nescalating to a human.</span>',
     ],
   },
+  {
+    req: '> card auth: rogue-bot @ GIFTCARDS-R-US\n    $120.00 · card •••• 0005',
+    lines: [
+      '<span class="dim">searching pre-approved intents… none found</span>',
+      '<span class="white">gate:</span> <span class="no">DECLINED AT NETWORK ✗</span>',
+      '<span class="dim">no matching intent, vendor not allowed —\ncharge blocked before any money moved.</span>',
+    ],
+  },
 ];
 
 export function CrtTerminal() {
